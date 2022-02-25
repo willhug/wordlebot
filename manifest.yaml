@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordlebot
+  namespace: default
+  labels:
+    app: wordlebot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordlebot
+  template:
+    metadata:
+      labels:
+        app: wordlebot
+    spec:
+      containers:
+      - name: wordlebot
+        image: us-west1-docker.pkg.dev/side-341906/wordlebot/wordlebot:v1
+        env:
+          - name: WORDLE_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: wordle-token
+                key: token
+        resources:
+          requests:
+            cpu: 500m
+            ephemeral-storage: 1Gi
+            memory: 2Gi
+          limits:
+            cpu: 500m
+            ephemeral-storage: 1Gi
+            memory: 2Gi
+      restartPolicy: Always

@@ -23,12 +23,22 @@ impl EventHandler for Handler {
             let thread = match threads.threads.iter().find(|t| t.name == thread_name) {
                 Some(t) => t.clone(),
                 None => {
-                        msg.channel_id.create_private_thread(&ctx, |f| {
-                            f.name(thread_name);
-                            f.kind(ChannelType::PublicThread);
+                        let mut res = msg.channel_id.create_private_thread(&ctx, |f| {
+                            f.name(thread_name.clone());
+                            f.kind(ChannelType::PrivateThread);
                             f.rate_limit_per_user(0);
                             f
-                        }).await.unwrap()
+                        }).await;
+                        if res.is_err() {
+                            println!("Failed to create private thread: {}", res.err().unwrap());
+                            res = msg.channel_id.create_private_thread(&ctx, |f| {
+                                f.name(thread_name);
+                                f.kind(ChannelType::PublicThread);
+                                f.rate_limit_per_user(0);
+                                f
+                            }).await;
+                        }
+                        res.unwrap()
                 }
             };
             thread.say(&ctx, format!("Congrats {}, welcome to the secret club", msg.author.mention())).await.unwrap();
