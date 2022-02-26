@@ -2,7 +2,7 @@ use std::env;
 
 use serenity::{
     async_trait,
-    model::{channel::{Message, ChannelType}, gateway::Ready},
+    model::{channel::{Message, ChannelType}, gateway::Ready, guild::PremiumTier},
     prelude::*,
 };
 
@@ -19,26 +19,32 @@ impl EventHandler for Handler {
             let day = rest.split_terminator('\n').collect::<Vec<_>>()[0].split_whitespace().collect::<Vec<_>>()[0];
             let thread_name = format!("Wordle Solvers {}", day);
             let chan = msg.channel_id.to_channel(&ctx.http).await.unwrap();
-            let threads = chan.guild().unwrap().guild_id.get_active_threads(&ctx.http).await.unwrap();
+            let guild_chan = chan.guild().unwrap();
+            let threads = guild_chan.guild_id.get_active_threads(&ctx.http).await.unwrap();
             let thread = match threads.threads.iter().find(|t| t.name == thread_name) {
                 Some(t) => t.clone(),
                 None => {
-                        let mut res = msg.channel_id.create_private_thread(&ctx, |f| {
+                        let guild = msg.guild_id.unwrap().to_partial_guild(&ctx).await.unwrap();
+                        let thread_type = match guild.premium_tier {
+                            PremiumTier::Tier3 | PremiumTier::Tier2 => ChannelType::PrivateThread,
+                            _ => ChannelType::PublicThread,
+                        };
+                        let chan_id = match thread_type {
+                            ChannelType::PublicThread => {
+                                match guild.channels(&ctx).await.unwrap().values().find(|c| c.name == format!("{}_solvers",  guild_chan.name)) {
+                                    Some(chan) => chan.id,
+                                    None => msg.channel_id,
+                                }
+                            },
+                            ChannelType::PrivateThread => msg.channel_id,
+                            _ => unreachable!(),
+                        };
+                        chan_id.create_private_thread(&ctx, |f| {
                             f.name(thread_name.clone());
-                            f.kind(ChannelType::PrivateThread);
+                            f.kind(thread_type);
                             f.rate_limit_per_user(0);
                             f
-                        }).await;
-                        if res.is_err() {
-                            println!("Failed to create private thread: {}", res.err().unwrap());
-                            res = msg.channel_id.create_private_thread(&ctx, |f| {
-                                f.name(thread_name);
-                                f.kind(ChannelType::PublicThread);
-                                f.rate_limit_per_user(0);
-                                f
-                            }).await;
-                        }
-                        res.unwrap()
+                        }).await.unwrap()
                 }
             };
             thread.say(&ctx, format!("Congrats {}, welcome to the secret club", msg.author.mention())).await.unwrap();
