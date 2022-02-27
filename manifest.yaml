@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: wordlebot
-        image: us-west1-docker.pkg.dev/side-341906/wordlebot/wordlebot:v1
+        image: us-west1-docker.pkg.dev/side-341906/wordlebot/wordlebot:latest
+        imagePullPolicy: Always
         env:
           - name: WORDLE_TOKEN
             valueFrom:
