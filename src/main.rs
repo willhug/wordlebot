@@ -1,10 +1,28 @@
 use std::env;
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use serenity::{
     async_trait,
-    model::{channel::{Message, ChannelType}, gateway::Ready, guild::PremiumTier},
+    model::{channel::{Message, ChannelType}, gateway::Ready, guild::PremiumTier, misc::Mention},
     prelude::*,
 };
+
+
+#[tokio::main]
+async fn main() {
+    let token = env::var("WORDLE_TOKEN")
+        .expect("Expected a token in the environment");
+
+    let mut client = Client::builder(&token)
+        .event_handler(Handler)
+        .await
+        .expect("Err creating client");
+
+    if let Err(why) = client.start().await {
+        println!("Client error: {:?}", why);
+    }
+}
 
 struct Handler;
 
@@ -15,8 +33,7 @@ impl EventHandler for Handler {
             return;
         }
         let content = msg.content.trim();
-        if let Some(rest) = content.strip_prefix("Wordle ") {
-            let day = rest.split_terminator('\n').collect::<Vec<_>>()[0].split_whitespace().collect::<Vec<_>>()[0];
+        if let Some((day, result, body)) = extract_wordle_data(content) {
             let thread_name = format!("Wordle Solvers {}", day);
             let chan = msg.channel_id.to_channel(&ctx.http).await.unwrap();
             let guild_chan = chan.guild().unwrap();
@@ -47,7 +64,7 @@ impl EventHandler for Handler {
                         }).await.unwrap()
                 }
             };
-            thread.say(&ctx, format!("Congrats {}, welcome to the secret club", msg.author.mention())).await.unwrap();
+            thread.say(&ctx, get_welcome_message(msg.author.mention(), result, body)).await.unwrap();
         }
     }
 
@@ -57,17 +74,51 @@ impl EventHandler for Handler {
 }
 
 
-#[tokio::main]
-async fn main() {
-    let token = env::var("WORDLE_TOKEN")
-        .expect("Expected a token in the environment");
+fn extract_wordle_data(content: &str) -> Option<(u32, &str, &str)> {
+    lazy_static! {
+        static ref WORDLE_REG: Regex = Regex::new(r"Wordle (\d+) ([\dX])/6\*?((?s).*)").unwrap();
+    }
+    let captures = WORDLE_REG.captures(content)?;
+    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
+    let result = captures.get(2)?.as_str();
+    let body= captures.get(3)?.as_str().trim();
+    Some((day, result, body))
+}
 
-    let mut client = Client::builder(&token)
-        .event_handler(Handler)
-        .await
-        .expect("Err creating client");
+fn get_welcome_message(author: Mention, result: &str, body: &str) -> String {
+    let suffix_msg = match result {
+        "1" => "WTFFF?!?!?!",
+        "2" => "Master! You're a master!",
+        "5" => "Just made it!",
+        "6" => "Phew! That was a close one!",
+        "X" => "Nutz! Better luck next time!",
+        _ => "Nice! You got it!",
+    };
+    format!("Welcome to the secret club {}\n{}\n{}", author, body, suffix_msg)
+}
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {:?}", why);
+
+#[cfg(test)]
+mod tests {
+    use crate::extract_wordle_data;
+
+    #[test]
+    fn test_regex() {
+        assert_eq!(extract_wordle_data("Wordle 1 1/6").unwrap(), (1, "1", ""));
+        assert_eq!(extract_wordle_data("Wordle 200 3/6*").unwrap(), (200, "3", ""));
+        assert_eq!(extract_wordle_data("Wordle 9 X/6").unwrap(), (9, "X", ""));
+        assert_eq!(extract_wordle_data("Wordle 229 6/6
+⬛🟨🟨⬛⬛
+🟩⬛⬛⬛🟨
+🟩🟩⬛⬛⬛
+🟩🟩⬛⬛⬛
+🟩🟩⬛⬛🟨
+🟩🟩🟩🟩🟩
+").unwrap(), (229, "6", "⬛🟨🟨⬛⬛
+🟩⬛⬛⬛🟨
+🟩🟩⬛⬛⬛
+🟩🟩⬛⬛⬛
+🟩🟩⬛⬛🟨
+🟩🟩🟩🟩🟩"));
     }
 }
