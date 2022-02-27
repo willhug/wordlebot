@@ -94,7 +94,7 @@ fn get_welcome_message(author: Mention, result: &str, body: &str) -> String {
         "X" => "Nutz! Better luck next time!",
         _ => "Nice! You got it!",
     };
-    format!("Welcome to the secret club {}\n{}\n{}", author, body, suffix_msg)
+    format!("Welcome to the secret club {}\n{}\n{}/6 {}", author, body, result, suffix_msg)
 }
 
 
