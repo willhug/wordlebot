@@ -83,6 +83,12 @@ fn extract_wordle_type_data(content: &str) -> Option<(&str, u32, &str, &str)> {
     if let Some((day, result, body)) = extract_tradle_data(content) {
         return Some(("Tradle", day, result, body));
     }
+    if let Some((day, result, body)) = extract_quordle_data(content) {
+        return Some(("Quordle", day, result, body));
+    }
+    if let Some((day, result, body)) = extract_octordle_data(content) {
+        return Some(("Octordle", day, result, body));
+    }
     None
 }
 
@@ -116,6 +122,26 @@ fn extract_tradle_data(content: &str) -> Option<(u32, &str, &str)> {
     let result = captures.get(2)?.as_str();
     let body= captures.get(3)?.as_str().trim();
     Some((day, result, body))
+}
+
+fn extract_quordle_data(content: &str) -> Option<(u32, &str, &str)> {
+    lazy_static! {
+        static ref QUORDLE_REG: Regex = Regex::new(r"Daily Quordle #(\d+)((?s).*)").unwrap();
+    }
+    let captures = QUORDLE_REG.captures(content)?;
+    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
+    let body= captures.get(2)?.as_str().trim();
+    Some((day, "", body))
+}
+
+fn extract_octordle_data(content: &str) -> Option<(u32, &str, &str)> {
+    lazy_static! {
+        static ref OCTO_REG: Regex = Regex::new(r"Daily Octordle #(\d+)((?s).*)").unwrap();
+    }
+    let captures = OCTO_REG.captures(content)?;
+    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
+    let body= captures.get(2)?.as_str().trim();
+    Some((day, "", body))
 }
 
 
@@ -177,5 +203,25 @@ mod tests {
 🟩🟩🟩🟩🟩
 https://oec.world/en/tradle").unwrap(), (7, "1", "🟩🟩🟩🟩🟩
 https://oec.world/en/tradle"));
+    }
+
+    #[test]
+    fn test_quordle_regex() {
+        assert_eq!(extract_quordle_data("Daily Quordle #50
+5️⃣4️⃣
+6️⃣7️⃣").unwrap(), (50, "", "5️⃣4️⃣
+6️⃣7️⃣"));
+    }
+
+    #[test]
+    fn test_octordle_regex() {
+        assert_eq!(extract_octordle_data("Daily Octordle #50
+6️⃣🔟
+4️⃣9️⃣
+7️⃣🕛
+5️⃣🕚").unwrap(), (50, "", "6️⃣🔟
+4️⃣9️⃣
+7️⃣🕛
+5️⃣🕚"));
     }
 }
