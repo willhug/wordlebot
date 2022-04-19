@@ -126,7 +126,7 @@ fn extract_tradle_data(content: &str) -> Option<(u32, &str, &str)> {
 
 fn extract_quordle_data(content: &str) -> Option<(u32, &str, &str)> {
     lazy_static! {
-        static ref QUORDLE_REG: Regex = Regex::new(r"Daily Quordle #(\d+)((?s).*)").unwrap();
+        static ref QUORDLE_REG: Regex = Regex::new(r"Daily Quordle #?(\d+)((?s).*)").unwrap();
     }
     let captures = QUORDLE_REG.captures(content)?;
     let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
@@ -208,6 +208,10 @@ https://oec.world/en/tradle"));
     #[test]
     fn test_quordle_regex() {
         assert_eq!(extract_quordle_data("Daily Quordle #50
+5️⃣4️⃣
+6️⃣7️⃣").unwrap(), (50, "", "5️⃣4️⃣
+6️⃣7️⃣"));
+        assert_eq!(extract_quordle_data("Daily Quordle 50
 5️⃣4️⃣
 6️⃣7️⃣").unwrap(), (50, "", "5️⃣4️⃣
 6️⃣7️⃣"));
