@@ -105,7 +105,7 @@ fn extract_wordle_data(content: &str) -> Option<(u32, &str, &str)> {
 
 fn extract_heardle_data(content: &str) -> Option<(u32, &str, &str)> {
     lazy_static! {
-        static ref HEARDLE_REG: Regex = Regex::new(r"#Heardle #(\d+)((?s).*)").unwrap();
+        static ref HEARDLE_REG: Regex = Regex::new(r"#?Heardle #?(\d+)((?s).*)").unwrap();
     }
     let captures = HEARDLE_REG.captures(content)?;
     let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
@@ -115,7 +115,7 @@ fn extract_heardle_data(content: &str) -> Option<(u32, &str, &str)> {
 
 fn extract_tradle_data(content: &str) -> Option<(u32, &str, &str)> {
     lazy_static! {
-        static ref TRADLE_REG: Regex = Regex::new(r"#Tradle #(\d+) ([\dX])/6((?s).*)").unwrap();
+        static ref TRADLE_REG: Regex = Regex::new(r"#?Tradle #?(\d+) ([\dX])/6((?s).*)").unwrap();
     }
     let captures = TRADLE_REG.captures(content)?;
     let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
@@ -136,7 +136,7 @@ fn extract_quordle_data(content: &str) -> Option<(u32, &str, &str)> {
 
 fn extract_octordle_data(content: &str) -> Option<(u32, &str, &str)> {
     lazy_static! {
-        static ref OCTO_REG: Regex = Regex::new(r"Daily Octordle #(\d+)((?s).*)").unwrap();
+        static ref OCTO_REG: Regex = Regex::new(r"Daily Octordle #?(\d+)((?s).*)").unwrap();
     }
     let captures = OCTO_REG.captures(content)?;
     let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
@@ -191,6 +191,7 @@ mod tests {
     #[test]
     fn test_heardle_regex() {
         assert_eq!(extract_heardle_data("#Heardle #16").unwrap(), (16, "", ""));
+        assert_eq!(extract_heardle_data("Heardle 16").unwrap(), (16, "", ""));
         assert_eq!(extract_heardle_data("#Heardle #16
 
 🔈🟥⬛️⬛️🟩⬜️⬜️").unwrap(), (16, "", "🔈🟥⬛️⬛️🟩⬜️⬜️"));
@@ -199,6 +200,7 @@ mod tests {
     #[test]
     fn test_tradle_regex() {
         assert_eq!(extract_tradle_data("#Tradle #7 1/6").unwrap(), (7, "1", ""));
+        assert_eq!(extract_tradle_data("Tradle 7 1/6").unwrap(), (7, "1", ""));
         assert_eq!(extract_tradle_data("#Tradle #7 1/6
 🟩🟩🟩🟩🟩
 https://oec.world/en/tradle").unwrap(), (7, "1", "🟩🟩🟩🟩🟩
@@ -219,6 +221,14 @@ https://oec.world/en/tradle"));
 
     #[test]
     fn test_octordle_regex() {
+        assert_eq!(extract_octordle_data("Daily Octordle 50
+6️⃣🔟
+4️⃣9️⃣
+7️⃣🕛
+5️⃣🕚").unwrap(), (50, "", "6️⃣🔟
+4️⃣9️⃣
+7️⃣🕛
+5️⃣🕚"));
         assert_eq!(extract_octordle_data("Daily Octordle #50
 6️⃣🔟
 4️⃣9️⃣
