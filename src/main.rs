@@ -66,12 +66,14 @@ impl EventHandler for Handler {
             let mut result = String::new();
             for (i, row) in rows.iter().enumerate() {
                 let row_str = format!(
-                    "{} - {} possibilities",
+                    "{} - {} possibilities\n",
                     row.iter().collect::<String>(),
                     res[i].1
                 );
                 result.push_str(&row_str);
             }
+            msg.reply(ctx, result).await.unwrap();
+            return;
         }
         if let Some((name, day, result, body)) = extract_wordle_type_data(content) {
             let thread_name = format!("{} Solvers {}", name, day);
@@ -153,7 +155,7 @@ fn extract_wordle_type_data(content: &str) -> Option<(&str, u32, &str, &str)> {
 
 fn extract_wordle_stats_query(content: &str) -> Option<&str> {
     lazy_static! {
-        static ref WORDLE_STATS_REG: Regex = Regex::new(r"!wordlestats\n((?s).*)").unwrap();
+        static ref WORDLE_STATS_REG: Regex = Regex::new(r"!wordlestats((?s).*)").unwrap();
     }
     let captures = WORDLE_STATS_REG.captures(content)?;
     let result = captures.get(1)?.as_str().trim();
