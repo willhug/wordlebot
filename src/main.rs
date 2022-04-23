@@ -66,10 +66,10 @@ impl EventHandler for Handler {
             let mut result = String::new();
             for (i, row) in rows.iter().enumerate() {
                 let row_str = format!(
-                    "`{}` - {} possibilities: ({})\n",
+                    "`{}` - {} possibilities: (`{}`)\n",
                     row.iter().collect::<String>(),
                     res[i].2,
-                    res[i].0.join(","),
+                    res[i].0.join("`, `"),
                 );
                 result.push_str(&row_str);
             }
