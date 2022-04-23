@@ -154,7 +154,7 @@ pub fn calculate_word_possibilities(
         let num_valid_words = valid_words.len() as u32;
         let mut top_five: Vec<_> = valid_words
             .iter()
-            .take(5)
+            .take(3)
             .map(|p| p.word.iter().collect::<String>())
             .collect();
         let extra_words: Vec<_> = (*EXTRA_WORDS_CHARS)
@@ -162,10 +162,10 @@ pub fn calculate_word_possibilities(
             .filter(|word| validator.valid_for_word(*word))
             .collect();
         let num_extra_words = extra_words.len() as u32;
-        if top_five.len() < 5 {
+        if top_five.len() < 3 {
             let mut extra_rows = extra_words
                 .iter()
-                .take(5 - top_five.len())
+                .take(3 - top_five.len())
                 .map(|p| p.word.iter().collect::<String>())
                 .collect();
             top_five.append(&mut extra_rows)

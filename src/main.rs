@@ -66,7 +66,7 @@ impl EventHandler for Handler {
             let mut result = String::new();
             for (i, row) in rows.iter().enumerate() {
                 let row_str = format!(
-                    "`{}` - {} possibilities: (`{}`)\n",
+                    "`{}` - {} words: (`{}`)\n",
                     row.iter().collect::<String>(),
                     res[i].2,
                     res[i].0.join("`, `"),
