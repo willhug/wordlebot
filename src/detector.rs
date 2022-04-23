@@ -135,25 +135,42 @@ pub fn parse_words_list(words: &str) -> anyhow::Result<Vec<[char; 5]>> {
 
 // Taking in a list of wordle words, calculate how many "valid" guesses were possible
 // at each step.
-pub fn calculate_word_possibilities(words: &mut Vec<[char; 5]>) -> anyhow::Result<Vec<(u32, u32)>> {
+pub fn calculate_word_possibilities(
+    words: &mut Vec<[char; 5]>,
+) -> anyhow::Result<Vec<(Vec<String>, u32, u32)>> {
     let wordleword = words
         .pop()
         .ok_or_else(|| anyhow::anyhow!("wordle words passed in!"))?;
 
     let mut validator = Validator::new(wordleword);
 
-    let mut num_word_chances: Vec<(u32, u32)> = vec![];
+    let mut num_word_chances: Vec<(Vec<String>, u32, u32)> = vec![];
     for word in words {
         validator.injest_word(*word);
-        let num_valid_words = (*VALID_WORDS_CHARS)
+        let valid_words: Vec<_> = (*VALID_WORDS_CHARS)
             .iter()
             .filter(|word| validator.valid_for_word(*word))
-            .count() as u32;
-        let num_extra_words = (*EXTRA_WORDS_CHARS)
+            .collect();
+        let num_valid_words = valid_words.len() as u32;
+        let mut top_five: Vec<_> = valid_words
+            .iter()
+            .take(5)
+            .map(|p| p.word.iter().collect::<String>())
+            .collect();
+        let extra_words: Vec<_> = (*EXTRA_WORDS_CHARS)
             .iter()
             .filter(|word| validator.valid_for_word(*word))
-            .count() as u32;
-        num_word_chances.push((num_valid_words, num_valid_words + num_extra_words))
+            .collect();
+        let num_extra_words = extra_words.len() as u32;
+        if top_five.len() < 5 {
+            let mut extra_rows = extra_words
+                .iter()
+                .take(5 - top_five.len())
+                .map(|p| p.word.iter().collect::<String>())
+                .collect();
+            top_five.append(&mut extra_rows)
+        }
+        num_word_chances.push((top_five, num_valid_words, num_valid_words + num_extra_words))
     }
 
     Ok(num_word_chances)
