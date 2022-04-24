@@ -76,7 +76,7 @@ impl EventHandler for Handler {
             msg.reply(ctx, result).await.unwrap();
             return;
         }
-        if let Some((name, day, result, body)) = extract_wordle_type_data(content) {
+        if let Some((name, day, result, body)) = extract_wordlelike_data(content) {
             let thread_name = format!("{} Solvers {}", name, day);
             let chan = msg.channel_id.to_channel(&ctx.http).await.unwrap();
             let guild_chan = chan.guild().unwrap();
@@ -135,25 +135,6 @@ impl EventHandler for Handler {
     }
 }
 
-fn extract_wordle_type_data(content: &str) -> Option<(&str, u32, &str, &str)> {
-    if let Some((day, result, body)) = extract_wordle_data(content) {
-        return Some(("Wordle", day, result, body));
-    }
-    if let Some((day, result, body)) = extract_heardle_data(content) {
-        return Some(("Heardle", day, result, body));
-    }
-    if let Some((day, result, body)) = extract_tradle_data(content) {
-        return Some(("Tradle", day, result, body));
-    }
-    if let Some((day, result, body)) = extract_quordle_data(content) {
-        return Some(("Quordle", day, result, body));
-    }
-    if let Some((day, result, body)) = extract_octordle_data(content) {
-        return Some(("Octordle", day, result, body));
-    }
-    None
-}
-
 fn extract_wordle_stats_query(content: &str) -> Option<&str> {
     lazy_static! {
         static ref WORDLE_STATS_REG: Regex = Regex::new(r"!wordlestats((?s).*)").unwrap();
@@ -163,56 +144,22 @@ fn extract_wordle_stats_query(content: &str) -> Option<&str> {
     Some(result)
 }
 
-fn extract_wordle_data(content: &str) -> Option<(u32, &str, &str)> {
+fn extract_wordlelike_data(content: &str) -> Option<(&str, u32, &str, &str)> {
     lazy_static! {
-        static ref WORDLE_REG: Regex = Regex::new(r"Wordle (\d+) ([\dX])/6\*?((?s).*)").unwrap();
+        static ref WORDLELIKE_REG: Regex = Regex::new(r"^#?(?:Daily )?([a-zA-Z]*) #?(\d+) ?([\dX])?(?:/6)?\*?((.|\n)*)?$").unwrap();
     }
-    let captures = WORDLE_REG.captures(content)?;
-    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
-    let result = captures.get(2)?.as_str();
-    let body = captures.get(3)?.as_str().trim();
-    Some((day, result, body))
-}
-
-fn extract_heardle_data(content: &str) -> Option<(u32, &str, &str)> {
-    lazy_static! {
-        static ref HEARDLE_REG: Regex = Regex::new(r"#?Heardle #?(\d+)((?s).*)").unwrap();
-    }
-    let captures = HEARDLE_REG.captures(content)?;
-    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
-    let body = captures.get(2)?.as_str().trim();
-    Some((day, "", body))
-}
-
-fn extract_tradle_data(content: &str) -> Option<(u32, &str, &str)> {
-    lazy_static! {
-        static ref TRADLE_REG: Regex = Regex::new(r"#?Tradle #?(\d+) ([\dX])/6((?s).*)").unwrap();
-    }
-    let captures = TRADLE_REG.captures(content)?;
-    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
-    let result = captures.get(2)?.as_str();
-    let body = captures.get(3)?.as_str().trim();
-    Some((day, result, body))
-}
-
-fn extract_quordle_data(content: &str) -> Option<(u32, &str, &str)> {
-    lazy_static! {
-        static ref QUORDLE_REG: Regex = Regex::new(r"Daily Quordle #?(\d+)((?s).*)").unwrap();
-    }
-    let captures = QUORDLE_REG.captures(content)?;
-    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
-    let body = captures.get(2)?.as_str().trim();
-    Some((day, "", body))
-}
-
-fn extract_octordle_data(content: &str) -> Option<(u32, &str, &str)> {
-    lazy_static! {
-        static ref OCTO_REG: Regex = Regex::new(r"Daily Octordle #?(\d+)((?s).*)").unwrap();
-    }
-    let captures = OCTO_REG.captures(content)?;
-    let day = captures.get(1)?.as_str().parse::<u32>().ok()?;
-    let body = captures.get(2)?.as_str().trim();
-    Some((day, "", body))
+    let captures = WORDLELIKE_REG.captures(content)?;
+    let name = captures.get(1)?.as_str();
+    let day = captures.get(2)?.as_str().parse::<u32>().ok()?;
+    let result = match captures.get(3) {
+        Some(m) => m.as_str(),
+        None => "",
+    };
+    let body = match captures.get(4) {
+        Some(body) => body.as_str().trim(),
+        None => "",
+    };
+    Some((name, day, result, body))
 }
 
 fn get_welcome_message(typ: &str, author: Mention, result: &str, body: &str) -> String {
@@ -242,14 +189,14 @@ mod tests {
 
     #[test]
     fn test_wordle_regex() {
-        assert_eq!(extract_wordle_data("Wordle 1 1/6").unwrap(), (1, "1", ""));
+        assert_eq!(extract_wordlelike_data("Wordle 1 1/6").unwrap(), ("Wordle", 1, "1", ""));
         assert_eq!(
-            extract_wordle_data("Wordle 200 3/6*").unwrap(),
-            (200, "3", "")
+            extract_wordlelike_data("Wordle 200 3/6*").unwrap(),
+            ("Wordle", 200, "3", "")
         );
-        assert_eq!(extract_wordle_data("Wordle 9 X/6").unwrap(), (9, "X", ""));
+        assert_eq!(extract_wordlelike_data("Wordle 9 X/6").unwrap(), ("Wordle", 9, "X", ""));
         assert_eq!(
-            extract_wordle_data(
+            extract_wordlelike_data(
                 "Wordle 229 6/6
 ⬛🟨🟨⬛⬛
 🟩⬛⬛⬛🟨
@@ -261,6 +208,7 @@ mod tests {
             )
             .unwrap(),
             (
+                "Wordle",
                 229,
                 "6",
                 "⬛🟨🟨⬛⬛
@@ -275,31 +223,32 @@ mod tests {
 
     #[test]
     fn test_heardle_regex() {
-        assert_eq!(extract_heardle_data("#Heardle #16").unwrap(), (16, "", ""));
-        assert_eq!(extract_heardle_data("Heardle 16").unwrap(), (16, "", ""));
+        assert_eq!(extract_wordlelike_data("#Heardle #16").unwrap(), ("Heardle", 16, "", ""));
+        assert_eq!(extract_wordlelike_data("Heardle 16").unwrap(), ("Heardle", 16, "", ""));
         assert_eq!(
-            extract_heardle_data(
+            extract_wordlelike_data(
                 "#Heardle #16
 
 🔈🟥⬛️⬛️🟩⬜️⬜️"
             )
             .unwrap(),
-            (16, "", "🔈🟥⬛️⬛️🟩⬜️⬜️")
+            ("Heardle", 16, "", "🔈🟥⬛️⬛️🟩⬜️⬜️")
         );
     }
 
     #[test]
     fn test_tradle_regex() {
-        assert_eq!(extract_tradle_data("#Tradle #7 1/6").unwrap(), (7, "1", ""));
-        assert_eq!(extract_tradle_data("Tradle 7 1/6").unwrap(), (7, "1", ""));
+        assert_eq!(extract_wordlelike_data("#Tradle #7 1/6").unwrap(), ("Tradle", 7, "1", ""));
+        assert_eq!(extract_wordlelike_data("Tradle 7 1/6").unwrap(), ("Tradle", 7, "1", ""));
         assert_eq!(
-            extract_tradle_data(
+            extract_wordlelike_data(
                 "#Tradle #7 1/6
 🟩🟩🟩🟩🟩
 https://oec.world/en/tradle"
             )
             .unwrap(),
             (
+                "Tradle",
                 7,
                 "1",
                 "🟩🟩🟩🟩🟩
@@ -311,13 +260,14 @@ https://oec.world/en/tradle"
     #[test]
     fn test_quordle_regex() {
         assert_eq!(
-            extract_quordle_data(
+            extract_wordlelike_data(
                 "Daily Quordle #50
 5️⃣4️⃣
 6️⃣7️⃣"
             )
             .unwrap(),
             (
+                "Quordle",
                 50,
                 "",
                 "5️⃣4️⃣
@@ -325,13 +275,14 @@ https://oec.world/en/tradle"
             )
         );
         assert_eq!(
-            extract_quordle_data(
+            extract_wordlelike_data(
                 "Daily Quordle 50
 5️⃣4️⃣
 6️⃣7️⃣"
             )
             .unwrap(),
             (
+                "Quordle",
                 50,
                 "",
                 "5️⃣4️⃣
@@ -343,7 +294,7 @@ https://oec.world/en/tradle"
     #[test]
     fn test_octordle_regex() {
         assert_eq!(
-            extract_octordle_data(
+            extract_wordlelike_data(
                 "Daily Octordle 50
 6️⃣🔟
 4️⃣9️⃣
@@ -352,6 +303,7 @@ https://oec.world/en/tradle"
             )
             .unwrap(),
             (
+                "Octordle",
                 50,
                 "",
                 "6️⃣🔟
@@ -361,7 +313,7 @@ https://oec.world/en/tradle"
             )
         );
         assert_eq!(
-            extract_octordle_data(
+            extract_wordlelike_data(
                 "Daily Octordle #50
 6️⃣🔟
 4️⃣9️⃣
@@ -370,6 +322,7 @@ https://oec.world/en/tradle"
             )
             .unwrap(),
             (
+                "Octordle",
                 50,
                 "",
                 "6️⃣🔟

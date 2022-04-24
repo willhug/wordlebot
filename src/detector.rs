@@ -2,6 +2,10 @@ use std::collections::HashSet;
 
 use crate::words::{EXTRA_WORDS, VALID_WORDS};
 use lazy_static::lazy_static;
+use rand::seq::IteratorRandom;
+
+
+const WORDS_TO_SHOW: usize = 4;
 
 lazy_static! {
     static ref EXTRA_WORDS_CHARS: Vec<PreparsedWord> = must_convert_list_to_char_list(EXTRA_WORDS);
@@ -126,10 +130,8 @@ impl Validator {
 }
 
 pub fn parse_words_list(words: &str) -> anyhow::Result<Vec<[char; 5]>> {
-    let splitwords: Vec<_> = words.split("\n").collect();
-    splitwords
-        .into_iter()
-        .map(|word| wordle_word_to_char_array(word))
+    words.split('\n').into_iter()
+        .map(wordle_word_to_char_array)
         .collect()
 }
 
@@ -138,6 +140,7 @@ pub fn parse_words_list(words: &str) -> anyhow::Result<Vec<[char; 5]>> {
 pub fn calculate_word_possibilities(
     words: &mut Vec<[char; 5]>,
 ) -> anyhow::Result<Vec<(Vec<String>, u32, u32)>> {
+    let mut rng = rand::thread_rng();
     let wordleword = words
         .pop()
         .ok_or_else(|| anyhow::anyhow!("wordle words passed in!"))?;
@@ -154,7 +157,8 @@ pub fn calculate_word_possibilities(
         let num_valid_words = valid_words.len() as u32;
         let mut top_five: Vec<_> = valid_words
             .iter()
-            .take(3)
+            .choose_multiple(&mut rng, WORDS_TO_SHOW)
+            .into_iter()
             .map(|p| p.word.iter().collect::<String>())
             .collect();
         let extra_words: Vec<_> = (*EXTRA_WORDS_CHARS)
@@ -162,10 +166,11 @@ pub fn calculate_word_possibilities(
             .filter(|word| validator.valid_for_word(*word))
             .collect();
         let num_extra_words = extra_words.len() as u32;
-        if top_five.len() < 3 {
+        if top_five.len() < WORDS_TO_SHOW {
             let mut extra_rows = extra_words
                 .iter()
-                .take(3 - top_five.len())
+                .choose_multiple(&mut rng, WORDS_TO_SHOW - top_five.len())
+                .into_iter()
                 .map(|p| p.word.iter().collect::<String>())
                 .collect();
             top_five.append(&mut extra_rows)
