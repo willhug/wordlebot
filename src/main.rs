@@ -147,7 +147,7 @@ fn extract_wordle_stats_query(content: &str) -> Option<&str> {
 
 fn extract_wordlelike_data(content: &str) -> Option<(&str, u32, &str, &str)> {
     lazy_static! {
-        static ref WORDLELIKE_REG: Regex = Regex::new(r"^#?(?:Daily )?([a-zA-Z]*) #?(\d+) ?([\dX])?(?:/6)?\*?((.|\n)*)?$").unwrap();
+        static ref WORDLELIKE_REG: Regex = Regex::new(r"^#?(?:Daily |I solved today's )?([a-zA-Z]*) \(?#?(\d+)\)? ?([\dX])?(?:/6)?\*?((.|\n)*)?$").unwrap();
     }
     let captures = WORDLELIKE_REG.captures(content)?;
     let name = captures.get(1)?.as_str();
@@ -330,6 +330,22 @@ https://oec.world/en/tradle"
 4️⃣9️⃣
 7️⃣🕛
 5️⃣🕚"
+            )
+        );
+    }
+
+    #[test]
+    fn test_redactle_regex() {
+        assert_eq!(
+            extract_wordlelike_data(
+                "I solved today's Redactle (#31) in 159 guesses with an accuracy of 28.30%. Played at https://www.redactle.com/"
+            )
+            .unwrap(),
+            (
+                "Redactle",
+                31,
+                "",
+                "in 159 guesses with an accuracy of 28.30%. Played at https://www.redactle.com/"
             )
         );
     }
